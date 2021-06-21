@@ -1,7 +1,14 @@
 const fetch = require("node-fetch");
+const { createGzip } = require('zlib');
+const { pipeline } = require('stream');
+const { promisify } = require('util');
+const { createWriteStream } = require('fs');
 
-var link = "https://github.com/mrpond/BlockTheSpot/blob/master/BlockTheSpot.bat";
-//convert to "https://raw.githubusercontent.com/mrpond/BlockTheSpot/master/BlockTheSpot.bat";
+const pipe = promisify(pipeline);
+
+var myArgs = process.argv.slice(2);
+
+let link = myArgs[0];
 
 let raw = "https://raw.githubusercontent.com";
 
@@ -18,17 +25,31 @@ function urlToRaw(url) {
         return newUrl;
     }
     else{
-        return "Not a github url";
+        console.log("Not a github url");
+        return null;
     }
 }
-var rawUrl = urlToRaw(link);
-console.log(urlToRaw(link));
-fetch(rawUrl).then(response => response.text()).then(text => console.log(text))
+async function rawToFile(url){
+    let response = await fetch(rawUrl);
+    let data = await response.text();
+    createFile(data);
+}
 
+function fileName(url){
+    var names = url.split("/");
+    return names[names.length - 1];
+}
 
-//console.log(rawToFile(rawUrl));
+function createFile(content){
+    do_gzip(content.toString(), `${fileName(link)}.gz`);
+}
 
+async function do_gzip(input, output) {
+  const gzip = createGzip();
+  const source = input;
+  const destination = createWriteStream(output);
+  await pipe(source, gzip, destination);
+}
 
-
-
-
+let rawUrl = urlToRaw(link);
+rawToFile(rawUrl);
